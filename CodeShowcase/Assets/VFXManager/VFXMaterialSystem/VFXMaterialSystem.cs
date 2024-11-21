@@ -18,11 +18,6 @@ public class VFXMaterialState : VFXState<VFXMaterialConfig>
 /// </summary>
 public class VFXMaterialSystem : VFXSystem<VFXSystem, VFXMaterialConfig, VFXMaterialState>
 {
-    /// <summary>
-    /// Staging is not supported now, because this project is only an sample to show my coding quality.
-    /// </summary>
-    protected override VFXSystemFeatures Features => VFXSystemFeatures.None;
-
     private List<Material> materials = new List<Material>();
     
     public override void Init()
@@ -85,17 +80,20 @@ public class VFXMaterialSystem : VFXSystem<VFXSystem, VFXMaterialConfig, VFXMate
         foreach (VFXMaterialFunction function in state.config.fadeInFunctions)
         {
             function.Revert(materials);
+            state.config.fadeInFunctions.Clear();
         }
 
         if ((state.config.features & VFXSystemFeatures.Staging) != 0)
         {
-            foreach (VFXMaterialFunction function in state.config.fadeInFunctions)
+            foreach (VFXMaterialFunction function in state.config.loopFunctions)
             {
                 function.Revert(materials);
+                state.config.loopFunctions.Clear();
             }
-            foreach (VFXMaterialFunction function in state.config.fadeInFunctions)
+            foreach (VFXMaterialFunction function in state.config.fadeOutFunctions)
             {
                 function.Revert(materials);
+                state.config.fadeOutFunctions.Clear();
             }
         }
     }

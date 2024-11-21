@@ -11,6 +11,7 @@ public class VFXSystemManager
     private static readonly Func<VFXSystem>[] Constructors = new Func<VFXSystem>[(int)VFXSystemID.Count]
     {
         () => new VFXMaterialSystem(),
+        () => new VFXScreenEffectSystem(),
     };
 
     public static VFXSystemManager Instance { get; } = new VFXSystemManager();
@@ -35,37 +36,36 @@ public class VFXSystemManager
         }
     }
 
-    public bool Add(VFXConfig config, VFXCaller target, out VFXHandler handler)
+    public bool Add(VFXConfig config, VFXTrigger trigger, out VFXHandler handler)
     {
         if ((config.Features & VFXSystemFeatures.RequiresACaller) != 0
-            && target == null || !target)
+            && trigger == null || !trigger)
         {
             Debug.LogError("Callable is invalid while config requires a caller.");
             handler = default;
             return false;
         }
 
-        int callerID = target.GetInstanceID();
+        int callerID = trigger.GetInstanceID();
         Dictionary<int, VFXSystem> systems = allSystems[(int)config.SystemID];
         if (!systems.TryGetValue(callerID, out VFXSystem system))
         {
-            systems[callerID] = system = CreateInstance(config.SystemID, target);
+            systems[callerID] = system = CreateInstance(config.SystemID, trigger);
         }
 
         return system.Add(config, out handler);
     }
 
-    private static VFXSystem CreateInstance(VFXSystemID id, VFXCaller target)
+    private static VFXSystem CreateInstance(VFXSystemID id, VFXTrigger trigger)
     {
         var system = Constructors[(int)id]();
-        system.Bind(target);
+        system.Bind(trigger);
         return system;
     }
 
-    public bool Remove(VFXConfig config, VFXHandler handler, VFXCaller target)
+    public bool Remove(VFXConfig config, ref VFXHandler handler, GameObject target)
     {
-        if ((config.Features & VFXSystemFeatures.RequiresACaller) != 0
-            && target == null || !target)
+        if ((config.Features & VFXSystemFeatures.RequiresACaller) != 0 && !target)
         {
             Debug.LogError("Callable is invalid while config requires a caller.");
             return false;
@@ -79,13 +79,14 @@ public class VFXSystemManager
             return false;
         }
 
-        return system.Remove(ref handler);
+        bool removed = system.Remove(ref handler);
+        return removed;
     }
 }
 
 public abstract class VFXSystem
 {
-    protected VFXCaller Target { get; private set; }
+    protected VFXTrigger trigger { get; private set; }
 
     public VFXSystem()
     {
@@ -95,9 +96,9 @@ public abstract class VFXSystem
     public abstract void UpdateStates();
     public abstract bool Add(VFXConfig config, out VFXHandler handler);
     public abstract bool Remove(ref VFXHandler handler);
-    public void Bind(VFXCaller target)
+    public void Bind(VFXTrigger trigger)
     {
-        Target = target;
+        this.trigger = trigger;
     }
 
     public abstract void Init();
@@ -125,7 +126,6 @@ public abstract class VFXSystem<TVFXSystem, TVFXConfig, TVFXState> : VFXSystem
     // TODO: Consider implement a index-cached list to save performance of fetching and looping.  
     private readonly Dictionary<int, TVFXState> _instances = new Dictionary<int, TVFXState>();
     // Use abstract to ensure users know the importance of correct feature flags.
-    protected abstract VFXSystemFeatures Features { get; }
     
     public sealed override bool Add(VFXConfig config, out VFXHandler handler)
     {
@@ -149,8 +149,8 @@ public abstract class VFXSystem<TVFXSystem, TVFXConfig, TVFXState> : VFXSystem
             return true;
         }
 
-        handler = null;
         GenericPool<VFXHandler>.Release(handler);
+        handler = null;
         return false;
     }
 
@@ -163,7 +163,7 @@ public abstract class VFXSystem<TVFXSystem, TVFXConfig, TVFXState> : VFXSystem
         {
             state.timeInStage += state.config.timeScaled ? unscaledDeltaTime : scaledDeltaTime;
             
-            if ((Features & VFXSystemFeatures.Staging) != 0)
+            if ((state.config.Features & VFXSystemFeatures.Staging) != 0)
             {
                 if (state.stage == VFXStage.FadingIn)
                 {
@@ -235,16 +235,16 @@ public abstract class VFXConfig : ScriptableObject
 {
     public abstract VFXSystemFeatures Features { get; }
     public abstract VFXSystemID SystemID { get; }
+    public abstract bool IsValid { get; }
     [Min(0)]
-    public float fadeInDuration;
+    public float fadeInDuration = 1;
     [Min(0)]
-    public int loopTimes;
+    public int loopTimes = 1;
     [Min(0)]
-    public float loopDuration;
+    public float loopDuration = 1;
     [Min(0)]
-    public float fadeOutDuration;
-    [Min(0)]
-    public bool timeScaled;
+    public float fadeOutDuration = 1;
+    public bool timeScaled = true;
 }
 
 public abstract class VFXState<TVFXConfig> where TVFXConfig : VFXConfig
@@ -285,6 +285,9 @@ public abstract class VFXState<TVFXConfig> where TVFXConfig : VFXConfig
     }
 }
 
+/// <summary>
+/// TODO: Implement index-cached data.
+/// </summary>
 public class VFXHandler
 {
     public int id;
@@ -293,5 +296,6 @@ public class VFXHandler
 public enum VFXSystemID
 {
     VFXMaterialSystem,
+    VFXScreenEffectSystem,
     Count,
 }
