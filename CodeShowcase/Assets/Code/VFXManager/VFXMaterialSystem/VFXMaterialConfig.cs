@@ -10,4 +10,14 @@ public class VFXMaterialConfig : VFXConfig
     public int priority;
     public List<Shader> supportedShaders = new();
     [SerializeReference] public List<VFXMaterialModifier> modifiers = new();
+
+    public virtual void OnValidate()
+    {
+        // Do NOT move this into the loop, or here will be more gc.
+        string assetName = name;
+        foreach (VFXMaterialModifier modifier in modifiers)
+        {
+            modifier.Init(assetName);
+        }
+    }
 }

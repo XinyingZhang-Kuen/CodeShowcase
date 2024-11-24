@@ -62,7 +62,7 @@ public class ValueOverrider<T>
         public int counter;
     }
 
-    private readonly List<Layer> _layers = new List<Layer>();
+    private readonly List<Layer> _layers = new();
     private bool _isDirty;
     public bool IsDirty => _isDirty;
     public int LayerCount => _layers.Count;

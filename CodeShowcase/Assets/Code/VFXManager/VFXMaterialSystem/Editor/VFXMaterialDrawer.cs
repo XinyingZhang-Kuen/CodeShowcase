@@ -210,6 +210,20 @@ namespace VFXManager.Editor
         }
     }
 
+    [CustomPropertyDrawer(typeof(VFXMaterialModifierColor))]
+    public class VFXMaterialModifierColorDrawer : VFXMaterialModifierDrawer
+    {
+        protected override int GetSelectionIndex(VFXMaterialConfigEditor editor, string name)
+        {
+            return editor.GetPropertyIndex(ShaderPropertyType.Color, name);
+        }
+
+        protected override GUIContent[] GetGUIContents(VFXMaterialConfigEditor editor)
+        {
+            return editor.GetPropertyLabels(ShaderPropertyType.Color);
+        }
+    }
+
     [CustomPropertyDrawer(typeof(VFXMaterialModifierTexture))]
     public class VFXMaterialModifierTextureDrawer : VFXMaterialModifierDrawer
     {

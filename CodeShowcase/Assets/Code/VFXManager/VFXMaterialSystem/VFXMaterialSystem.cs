@@ -35,6 +35,13 @@ public class VFXMaterialSystem : VFXSystem<VFXMaterialConfig, VFXMaterialState>
         }
 
         _entityRendering = entity.rendering;
+        foreach (RendererWrapper rendererWrapper in _entityRendering.rendererWrappers)
+        {
+            foreach (MaterialWrapper materialWrapper in rendererWrapper.materialWrappers)
+            {
+                materials.Add(materialWrapper);
+            }
+        }
     }
 
     protected override void OnStateInit(VFXMaterialState state)
@@ -45,7 +52,6 @@ public class VFXMaterialSystem : VFXSystem<VFXMaterialConfig, VFXMaterialState>
         for (int i = 0; i < state.config.modifiers.Count; i++)
         {
             state.modifiers.Add(state.config.modifiers[i].Copy());
-            state.modifiers[i].Init(state.config.name);
         }
     }
 
@@ -54,9 +60,9 @@ public class VFXMaterialSystem : VFXSystem<VFXMaterialConfig, VFXMaterialState>
         base.OnPerform(state);
 
         float timeInStage = state.timeInStage / state.StageDuration;
-        foreach (VFXMaterialModifier function in state.config.modifiers)
+        foreach (VFXMaterialModifier modifier in state.config.modifiers)
         {
-            function.Apply(state, timeInStage);
+            modifier.Apply(state, timeInStage);
         }
     }
 
@@ -64,9 +70,9 @@ public class VFXMaterialSystem : VFXSystem<VFXMaterialConfig, VFXMaterialState>
     {
         base.OnClear(state);
 
-        foreach (VFXMaterialModifier function in state.config.modifiers)
+        foreach (VFXMaterialModifier modifier in state.config.modifiers)
         {
-            function.Revert(materials);
+            modifier.Revert(materials);
         }
     }
 }

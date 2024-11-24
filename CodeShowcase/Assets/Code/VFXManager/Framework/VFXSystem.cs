@@ -45,13 +45,13 @@ public class VFXSystemManager
         }
     }
 
-    public bool Add(VFXConfig config, IVFXTrigger trigger, out VFXHandler handler)
+    public bool Add(VFXConfig config, IVFXTrigger trigger, out int vfxID)
     {
         if ((config.Features & VFXSystemFeatures.RequiresACaller) != 0
             && trigger == null || !trigger.gameObject)
         {
             Debug.LogError("Callable is invalid while config requires a caller.");
-            handler = default;
+            vfxID = default;
             return false;
         }
 
@@ -62,17 +62,18 @@ public class VFXSystemManager
             systems[callerID] = system = CreateInstance(config.SystemID, trigger);
         }
 
-        return system.Add(config, out handler);
+        return system.Add(config, out vfxID);
     }
 
     private static VFXSystem CreateInstance(VFXSystemID id, IVFXTrigger trigger)
     {
         var system = Constructors[(int)id]();
         system.Bind(trigger);
+        system.Init();
         return system;
     }
 
-    public bool Remove(VFXConfig config, ref VFXHandler handler, GameObject target)
+    public bool Remove(VFXConfig config, int vfxID, GameObject target)
     {
         if ((config.Features & VFXSystemFeatures.RequiresACaller) != 0 && !target)
         {
@@ -88,7 +89,7 @@ public class VFXSystemManager
             return false;
         }
 
-        bool removed = system.Remove(ref handler);
+        bool removed = system.Remove(vfxID);
         return removed;
     }
 }
@@ -97,21 +98,14 @@ public abstract class VFXSystem
 {
     public const int VFXStageCount = 3;
     protected IVFXTrigger trigger { get; private set; }
-
-    public VFXSystem()
-    {
-        
-    }
-
     public abstract void UpdateStates();
-    public abstract bool Add(VFXConfig config, out VFXHandler handler);
-    public abstract bool Remove(ref VFXHandler handler);
+    public abstract bool Add(VFXConfig config, out int vfxID);
+    public abstract bool Remove(int vfxID);
+    public abstract void Init();
     public void Bind(IVFXTrigger trigger)
     {
         this.trigger = trigger;
     }
-
-    public abstract void Init();
 }
 
 [Flags]
@@ -133,35 +127,38 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
 {
     private static int _increasingID;
     // TODO: Consider implement a index-cached list to save performance of fetching and looping.  
-    private readonly Dictionary<int, TVFXState> _instances = new Dictionary<int, TVFXState>();
-    // Use abstract to ensure users know the importance of correct feature flags.
-    
-    public sealed override bool Add(VFXConfig config, out VFXHandler handler)
+    private readonly Dictionary<int, TVFXState> _states = new();
+    private static List<TVFXState> removeList = new();
+
+    public sealed override bool Add(VFXConfig config, out int vfxID)
     {
-        handler = GenericPool<VFXHandler>.Get();
         TVFXState state = GenericPool<TVFXState>.Get();
         state.config = config as TVFXConfig;
-        state.id = _increasingID++;
-        _instances.Add(state.id, state);
+        vfxID = state.id = _increasingID++;
+        _states.Add(state.id, state);
         OnStateInit(state);
         OnPlayStart(state);
         state.stage = VFXStage.FadingIn;
         return true;
     }
 
-    public sealed override bool Remove(ref VFXHandler handler)
+    public sealed override bool Remove(int vfxID)
     {
-        if (_instances.TryGetValue(handler.id, out TVFXState state))
+        if (_states.TryGetValue(vfxID, out TVFXState state))
         {
-            OnClear(state);
-            state.Clear();
-            GenericPool<TVFXState>.Release(state);
+            RemoveImpl(state);
             return true;
         }
 
-        GenericPool<VFXHandler>.Release(handler);
-        handler = null;
         return false;
+    }
+
+    private void RemoveImpl(TVFXState state)
+    {
+        _states.Remove(state.id);
+        OnClear(state);
+        state.Clear();
+        GenericPool<TVFXState>.Release(state);
     }
 
     public sealed override void UpdateStates()
@@ -169,7 +166,7 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
         float scaledDeltaTime = Time.deltaTime;
         float unscaledDeltaTime = Time.unscaledDeltaTime;
 
-        foreach (TVFXState state in _instances.Values)
+        foreach (TVFXState state in _states.Values)
         {
             state.timeInStage += state.config.timeScaled ? unscaledDeltaTime : scaledDeltaTime;
             
@@ -195,7 +192,7 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
                         }
                     }
                 }
-                if (state.stage == VFXStage.FadingIn)
+                if (state.stage == VFXStage.FadingOut)
                 {
                     if (state.timeInStage >= state.config.fadeOutDuration)
                     {
@@ -204,9 +201,23 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
                     }
                 }
             }
-            
-            OnPerform(state);
+
+            if (state.stage <= VFXStage.FadingOut)
+            {
+                OnPerform(state);
+            }
+            else
+            {
+                removeList.Add(state);
+            }
         }
+
+        foreach (TVFXState state in removeList)
+        {
+            RemoveImpl(state);
+        }
+
+        removeList.Clear();
     }
 
     protected virtual void OnStateInit(TVFXState state)
@@ -235,7 +246,7 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
 /// </summary>
 public enum VFXStage
 {
-    Inactive,
+    Inactive = -1,
     FadingIn,
     Looping,
     FadingOut,
@@ -293,14 +304,6 @@ public abstract class VFXState<TVFXConfig> where TVFXConfig : VFXConfig
         timeInStage = 0;
         loopedTimes = 0;
     }
-}
-
-/// <summary>
-/// TODO: Implement index-cached data.
-/// </summary>
-public class VFXHandler
-{
-    public int id;
 }
 
 public enum VFXSystemID

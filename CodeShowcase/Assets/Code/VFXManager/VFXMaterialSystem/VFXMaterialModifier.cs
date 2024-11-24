@@ -7,9 +7,9 @@ using UnityEngine.Pool;
 [Serializable]
 public abstract class VFXMaterialModifier
 {
-    public ValueOverriderSource source { get; private set; }
+    public ValueOverriderSource source { get; protected set; }
     public string propertyName;
-    public int id { get; private set; }
+    public int id { get; protected set; }
 
     public abstract void Apply(VFXMaterialState state, float time);
     public abstract void Revert(List<MaterialWrapper> materials);
@@ -84,7 +84,7 @@ public abstract class VFXMaterialModifier<T> : VFXMaterialModifier
     {
         for (int index = 0; index < materials.Count; index++)
         {
-            _overriders[index]?.Pop(source, true);
+            _overriders[index]?.Pop(source, false);
             _overriders[index] = null;
         }
     }
@@ -128,11 +128,14 @@ public class VFXMaterialModifierInt : VFXMaterialModifier<int>
     /// <returns></returns>
     public override VFXMaterialModifier Copy()
     {
-        VFXMaterialModifierInt function = GenericPool<VFXMaterialModifierInt>.Get();
-        function.fixedValues = fixedValues;
-        function.isCurveMode = isCurveMode;
-        function.curves = curves;
-        return function;
+        VFXMaterialModifierInt modifier = GenericPool<VFXMaterialModifierInt>.Get();
+        modifier.source = source;
+        modifier.id = id;
+        modifier.propertyName = propertyName;
+        modifier.fixedValues = fixedValues;
+        modifier.isCurveMode = isCurveMode;
+        modifier.curves = curves;
+        return modifier;
     }
 }
 
@@ -158,11 +161,14 @@ public class VFXMaterialModifierFloat : VFXMaterialModifier<float>
 
     public override VFXMaterialModifier Copy()
     {
-        VFXMaterialModifierFloat function = GenericPool<VFXMaterialModifierFloat>.Get();
-        function.fixedValues = fixedValues;
-        function.isCurveMode = isCurveMode;
-        function.curves = curves;
-        return function;
+        VFXMaterialModifierFloat modifier = GenericPool<VFXMaterialModifierFloat>.Get();
+        modifier.source = source;
+        modifier.id = id;
+        modifier.propertyName = propertyName;
+        modifier.fixedValues = fixedValues;
+        modifier.isCurveMode = isCurveMode;
+        modifier.curves = curves;
+        return modifier;
     }
 }
 
@@ -217,11 +223,14 @@ public class VFXMaterialModifierVector : VFXMaterialModifier<Vector4>
 
     public override VFXMaterialModifier Copy()
     {
-        VFXMaterialModifierVector function = GenericPool<VFXMaterialModifierVector>.Get();
-        function.fixedValues = fixedValues;
-        function.isCurveMode = isCurveMode;
-        function.curves = curves;
-        return function;
+        VFXMaterialModifierVector modifier = GenericPool<VFXMaterialModifierVector>.Get();
+        modifier.source = source;
+        modifier.id = id;
+        modifier.propertyName = propertyName;
+        modifier.fixedValues = fixedValues;
+        modifier.isCurveMode = isCurveMode;
+        modifier.curves = curves;
+        return modifier;
     }
 }
 
@@ -247,11 +256,14 @@ public class VFXMaterialModifierColor : VFXMaterialModifier<Color>
 
     public override VFXMaterialModifier Copy()
     {
-        VFXMaterialModifierColor function = GenericPool<VFXMaterialModifierColor>.Get();
-        function.fixedValues = fixedValues;
-        function.isCurveMode = isCurveMode;
-        function.curves = curves;
-        return function;
+        VFXMaterialModifierColor modifier = GenericPool<VFXMaterialModifierColor>.Get();
+        modifier.source = source;
+        modifier.id = id;
+        modifier.propertyName = propertyName;
+        modifier.fixedValues = fixedValues;
+        modifier.isCurveMode = isCurveMode;
+        modifier.curves = curves;
+        return modifier;
     }
 }
 
@@ -270,10 +282,13 @@ public class VFXMaterialModifierTexture : VFXMaterialModifier<Texture>
 
     public override VFXMaterialModifier Copy()
     {
-        VFXMaterialModifierTexture function = GenericPool<VFXMaterialModifierTexture>.Get();
-        function.fixedValues = fixedValues;
-        function.isCurveMode = isCurveMode;
-        return function;
+        VFXMaterialModifierTexture modifier = GenericPool<VFXMaterialModifierTexture>.Get();
+        modifier.source = source;
+        modifier.id = id;
+        modifier.propertyName = propertyName;
+        modifier.fixedValues = fixedValues;
+        modifier.isCurveMode = isCurveMode;
+        return modifier;
     }
 }
 [Serializable]
@@ -298,11 +313,14 @@ public class VFXMaterialModifierKeyword : VFXMaterialModifier<bool>
 
     public override VFXMaterialModifier Copy()
     {
-        VFXMaterialModifierKeyword function = GenericPool<VFXMaterialModifierKeyword>.Get();
-        function.fixedValues = fixedValues;
-        function.isCurveMode = isCurveMode;
-        function.curves = curves;
-        return function;
+        VFXMaterialModifierKeyword modifier = GenericPool<VFXMaterialModifierKeyword>.Get();
+        modifier.source = source;
+        modifier.id = id;
+        modifier.propertyName = propertyName;
+        modifier.fixedValues = fixedValues;
+        modifier.isCurveMode = isCurveMode;
+        modifier.curves = curves;
+        return modifier;
     }
 }
 
@@ -328,10 +346,13 @@ public class VFXMaterialModifierShaderPass : VFXMaterialModifier<bool>
 
     public override VFXMaterialModifier Copy()
     {
-        VFXMaterialModifierShaderPass function = GenericPool<VFXMaterialModifierShaderPass>.Get();
-        function.fixedValues = fixedValues;
-        function.isCurveMode = isCurveMode;
-        function.curves = curves;
-        return function;
+        VFXMaterialModifierShaderPass modifier = GenericPool<VFXMaterialModifierShaderPass>.Get();
+        modifier.source = source;
+        modifier.id = id;
+        modifier.propertyName = propertyName;
+        modifier.fixedValues = fixedValues;
+        modifier.isCurveMode = isCurveMode;
+        modifier.curves = curves;
+        return modifier;
     }
 }

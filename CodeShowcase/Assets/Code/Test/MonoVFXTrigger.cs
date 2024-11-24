@@ -6,14 +6,14 @@ public class MonoVFXTrigger : MonoBehaviour, IVFXTrigger
 {
     [OnValueChanged(nameof(CheckIfConfigEditedWhenItsRunning))]
     public List<VFXConfig> configs = new();
-    private readonly List<VFXHandler> _handlers = new();
+    private readonly List<int> _handlers = new();
     
     private void OnEnable()
     {
         foreach (VFXConfig config in configs)
         {
-            VFXSystemManager.Instance.Add(config, this, out VFXHandler handler);
-            _handlers.Add(handler);
+            VFXSystemManager.Instance.Add(config, this, out int vfxID);
+            _handlers.Add(vfxID);
         }
     }
 
@@ -22,8 +22,8 @@ public class MonoVFXTrigger : MonoBehaviour, IVFXTrigger
         for (var index = 0; index < configs.Count; index++)
         {
             VFXConfig config = configs[index];
-            VFXHandler handler = _handlers[index];
-            VFXSystemManager.Instance.Remove(config, ref handler, gameObject);
+            int vfxID = _handlers[index];
+            VFXSystemManager.Instance.Remove(config, vfxID, gameObject);
         }
         _handlers.Clear();
     }

@@ -17,7 +17,7 @@ public partial class MaterialWrapper
     {
         get
         {
-            if (_instancedMaterial != null && _originalMaterial != null)
+            if (_instancedMaterial == null && _originalMaterial != null)
             {
                 _instancedMaterial = new Material(_originalMaterial);
                 List<Material> sharedMaterials = ListPool<Material>.Get();
