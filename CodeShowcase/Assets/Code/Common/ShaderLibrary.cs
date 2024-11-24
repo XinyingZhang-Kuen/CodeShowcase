@@ -38,6 +38,7 @@ public class PassInfo
 
 /// <summary>
 /// High performance library with optimized shader mask.
+/// TODO: Serialize all shader data for runtime.
 /// </summary>
 public class ShaderLibrary
 {

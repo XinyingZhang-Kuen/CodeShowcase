@@ -26,12 +26,12 @@ public partial class MaterialWrapper
     private static readonly List<int> RemoveListInt = new();
     private static readonly List<string> RemoveListString = new();
 
-    public unsafe ValueOverrider<int> GetOverriderInt(VFXMaterialModifier modifier)
+    public ValueOverrider<int> GetOverriderInt(VFXMaterialModifier modifier)
     {
         if (!_intOverriders.TryGetValue(modifier.id, out var overrider))
         {
             float floatValue = instancedMaterial.GetFloat(modifier.id);
-            int intValue = *(int*)&floatValue;
+            int intValue = Unsafe.PointerCast<float, int>(floatValue);
             _intOverriders[modifier.id].Push(BaseValueSource, intValue, -1);
             _intOverriders[modifier.id] = overrider = GenericPool<ValueOverrider<int>>.Get();
         }
@@ -115,10 +115,11 @@ public partial class MaterialWrapper
     /// Called once per frame only.
     /// Apply all dirty values to material, and remove overriders that is empty.
     /// </summary>
-    private unsafe void ApplyOverriders()
+    private void ApplyOverriders()
     {
         #region Int
 
+        // TODO: Use MaterialProperty.IsPointerCastInt to decide use pointer cast or not.
         foreach (KeyValuePair<int, ValueOverrider<int>> pair in _intOverriders)
         {
             ValueOverrider<int> overrider = pair.Value;
@@ -126,7 +127,7 @@ public partial class MaterialWrapper
             {
                 int propertyID = pair.Key;
                 int intValue = overrider.GetValue();
-                float floatValue = *(float*)&intValue;
+                float floatValue = Unsafe.PointerCast<int, float>(intValue);
                 instancedMaterial.SetFloat(propertyID, floatValue);
                 if (overrider.LayerCount == 1)
                 {
