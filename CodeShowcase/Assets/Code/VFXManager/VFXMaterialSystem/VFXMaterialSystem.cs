@@ -34,7 +34,7 @@ public class VFXMaterialSystem : VFXSystem<VFXMaterialConfig, VFXMaterialState>
             return;
         }
 
-        _entityRendering = entity.entityRendering;
+        _entityRendering = entity.rendering;
     }
 
     protected override void OnStateInit(VFXMaterialState state)

@@ -3,6 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 
+public interface IVFXTrigger
+{
+    public GameObject gameObject { get; }
+}
+
 public class VFXSystemManager
 {
     private Dictionary<int, VFXSystem>[] allSystems = new Dictionary<int, VFXSystem>[(int)VFXSystemID.Count]
@@ -40,17 +45,17 @@ public class VFXSystemManager
         }
     }
 
-    public bool Add(VFXConfig config, VFXTrigger trigger, out VFXHandler handler)
+    public bool Add(VFXConfig config, IVFXTrigger trigger, out VFXHandler handler)
     {
         if ((config.Features & VFXSystemFeatures.RequiresACaller) != 0
-            && trigger == null || !trigger)
+            && trigger == null || !trigger.gameObject)
         {
             Debug.LogError("Callable is invalid while config requires a caller.");
             handler = default;
             return false;
         }
 
-        int callerID = trigger.GetInstanceID();
+        int callerID = trigger.gameObject.GetInstanceID();
         Dictionary<int, VFXSystem> systems = allSystems[(int)config.SystemID];
         if (!systems.TryGetValue(callerID, out VFXSystem system))
         {
@@ -60,7 +65,7 @@ public class VFXSystemManager
         return system.Add(config, out handler);
     }
 
-    private static VFXSystem CreateInstance(VFXSystemID id, VFXTrigger trigger)
+    private static VFXSystem CreateInstance(VFXSystemID id, IVFXTrigger trigger)
     {
         var system = Constructors[(int)id]();
         system.Bind(trigger);
@@ -91,7 +96,7 @@ public class VFXSystemManager
 public abstract class VFXSystem
 {
     public const int VFXStageCount = 3;
-    protected VFXTrigger trigger { get; private set; }
+    protected IVFXTrigger trigger { get; private set; }
 
     public VFXSystem()
     {
@@ -101,7 +106,7 @@ public abstract class VFXSystem
     public abstract void UpdateStates();
     public abstract bool Add(VFXConfig config, out VFXHandler handler);
     public abstract bool Remove(ref VFXHandler handler);
-    public void Bind(VFXTrigger trigger)
+    public void Bind(IVFXTrigger trigger)
     {
         this.trigger = trigger;
     }

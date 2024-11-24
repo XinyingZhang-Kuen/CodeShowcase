@@ -2,6 +2,24 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
+using Object = UnityEngine.Object;
+
+public static class UnityExtensions
+{
+    public static void Destroy(this Object unityObject)
+    {
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            Object.DestroyImmediate(unityObject);
+        }
+        else
+#endif
+        {
+            Object.Destroy(unityObject);
+        }
+    }
+}
 
 /// <summary>
 /// Use this scope to ensure the release of list never skipped even there's a exception in the scope.

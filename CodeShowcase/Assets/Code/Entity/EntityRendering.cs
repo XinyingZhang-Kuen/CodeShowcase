@@ -22,6 +22,14 @@ public class EntityRendering
         }
     }
 
+    public void BeforeRendering()
+    {
+        foreach (RendererWrapper rendererWrapper in rendererWrappers)
+        {
+            rendererWrapper.BeforeRendering();
+        }
+    }
+
     public void Clear()
     {
         gameObject = default;

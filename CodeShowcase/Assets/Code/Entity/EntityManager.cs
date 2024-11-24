@@ -29,4 +29,16 @@ public class EntityManager
     {
         _entities.Remove(entity.gameObject);
     }
+
+    /// <summary>
+    /// There may still be some logic running in late update, so it would be 
+    /// The submit of material data when culling happens in SRP.
+    /// </summary>
+    public void BeforeRendering()
+    {
+        foreach (Entity entity in _entities.Values)
+        {
+            entity.BeforeRendering();
+        }
+    }
 }

@@ -2,7 +2,7 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
 
-public class VFXTrigger : MonoBehaviour
+public class MonoVFXTrigger : MonoBehaviour, IVFXTrigger
 {
     [OnValueChanged(nameof(CheckIfConfigEditedWhenItsRunning))]
     public List<VFXConfig> configs = new();

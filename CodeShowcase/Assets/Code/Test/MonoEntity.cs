@@ -1,5 +1,8 @@
 ﻿using UnityEngine;
 
+/// <summary>
+/// It is not proper to register an entity by a MonoBehaviour in game, so this only is a test tool.
+/// </summary>
 public class MonoEntity : MonoBehaviour
 {
     private Entity _entity;
