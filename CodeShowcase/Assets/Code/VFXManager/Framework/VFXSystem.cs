@@ -21,7 +21,13 @@ public abstract class VFXSystem
 public enum VFXSystemFeatures
 {
     None = 0,
+    /// <summary>
+    /// Fade in, loop and fade out.
+    /// </summary>
     Staging = 1 << 0,
+    /// <summary>
+    /// Some of systems don't need a given target. for example, global scene effects. 
+    /// </summary>
     Binding = 1 << 1,
 }
 
@@ -36,37 +42,54 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
 {
     private static int _increasingID;
     // TODO: Consider implement a index-cached list to save performance of fetching and looping.
-    private readonly Dictionary<int, TVFXState> _states = new();
-    private static List<TVFXState> removeList = new();
+    // private readonly Dictionary<int, TVFXState> _states = new();
+    private readonly List<TVFXState> _states = new();
+    private static List<int> removeIndexList = new();
+
+    private struct VFXStateComparer : IComparer<TVFXState>
+    {
+        public static VFXStateComparer instance;
+        public int Compare(TVFXState x, TVFXState y)
+        {
+            return x.config.priority.CompareTo(y.config.priority);
+        }
+    }
 
     public sealed override bool Add(VFXConfig config, GameObject target, out VFXHandler handler)
     {
         TVFXState state = GenericPool<TVFXState>.Get();
         state.config = config as TVFXConfig;
         int vfxID = state.id = _increasingID++;
-        _states.Add(state.id, state);
+        _states.Add(state);
         int targetID = target ? target.GetInstanceID() : 0;
         handler = new VFXHandler(config.SystemID, vfxID, targetID);
+        int index = _states.BinarySearch(state, VFXStateComparer.instance);
+        _states.Insert(index, state);
         OnStateInit(state);
         OnPlayStart(state);
         state.stage = VFXStage.FadingIn;
         return true;
     }
-
+    
     public sealed override bool Remove(int vfxID)
     {
-        if (_states.TryGetValue(vfxID, out TVFXState state))
+        for (int index = 0; index < _states.Count; index++)
         {
-            RemoveImpl(state);
-            return true;
+            TVFXState vfxState = _states[index];
+            if (vfxState.id == vfxID)
+            {
+                RemoveImpl(index);
+                return true;
+            }
         }
-
+        
         return false;
     }
 
-    private void RemoveImpl(TVFXState state)
+    private void RemoveImpl(int index)
     {
-        _states.Remove(state.id);
+        TVFXState state = _states[index];
+        _states.RemoveAt(index);
         OnClear(state);
         state.Clear();
         GenericPool<TVFXState>.Release(state);
@@ -77,10 +100,11 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
         float scaledDeltaTime = Time.deltaTime;
         float unscaledDeltaTime = Time.unscaledDeltaTime;
 
-        foreach (TVFXState state in _states.Values)
+        for (int index = 0; index < _states.Count; index++)
         {
+            TVFXState state = _states[index];
             state.timeInStage += state.config.timeScaled ? unscaledDeltaTime : scaledDeltaTime;
-            
+
             if ((state.config.Features & VFXSystemFeatures.Staging) != 0)
             {
                 if (state.stage == VFXStage.FadingIn)
@@ -91,6 +115,7 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
                         state.stage++;
                     }
                 }
+
                 if (state.stage == VFXStage.Looping)
                 {
                     if (state.timeInStage >= state.config.loopDuration)
@@ -103,6 +128,7 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
                         }
                     }
                 }
+
                 if (state.stage == VFXStage.FadingOut)
                 {
                     if (state.timeInStage >= state.config.fadeOutDuration)
@@ -119,16 +145,16 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
             }
             else
             {
-                removeList.Add(state);
+                removeIndexList.Add(index);
             }
         }
 
-        foreach (TVFXState state in removeList)
+        for (int index = removeIndexList.Count - 1; index >= 0; index--)
         {
-            RemoveImpl(state);
+            RemoveImpl(index);
         }
 
-        removeList.Clear();
+        removeIndexList.Clear();
     }
 
     protected virtual void OnStateInit(TVFXState state)
@@ -168,6 +194,7 @@ public abstract class VFXConfig : ScriptableObject
     public abstract VFXSystemFeatures Features { get; }
     public abstract VFXSystemID SystemID { get; }
     public abstract bool IsValid { get; }
+    public int priority = 0;
     [Min(0)]
     public float fadeInDuration = 1;
     [Min(0)]

@@ -7,7 +7,6 @@ public class VFXMaterialConfig : VFXConfig
     public override VFXSystemFeatures Features => VFXSystemFeatures.Staging | VFXSystemFeatures.Binding;
     public override VFXSystemID SystemID => VFXSystemID.VFXMaterialSystem;
     public override bool IsValid => true;
-    public int priority;
     public List<Shader> supportedShaders = new();
     [SerializeReference] public List<VFXMaterialModifier> modifiers = new();
 
