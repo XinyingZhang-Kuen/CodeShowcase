@@ -28,7 +28,7 @@ public class VFXScreenEffectSystem : VFXSystem<VFXScreenEffectConfig, VFXScreenE
 
     public override void Init()
     {
-        Camera camera = trigger.gameObject.GetComponent<Camera>();
+        Camera camera = target.gameObject.GetComponent<Camera>();
         cameraData = CameraManager.Instance.GetCameraData(camera);
     }
 

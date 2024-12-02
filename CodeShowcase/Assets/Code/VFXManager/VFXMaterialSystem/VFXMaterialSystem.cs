@@ -20,16 +20,16 @@ public class VFXMaterialSystem : VFXSystem<VFXMaterialConfig, VFXMaterialState>
 
     public override void Init()
     {
-        if (!trigger.gameObject)
+        if (!target.gameObject)
         {
             Debug.LogError($"GameObject is null or destroyed!");
             return;
         }
         
-        Entity entity = EntityManager.instance.FindEntity(trigger.gameObject);
+        Entity entity = EntityManager.instance.FindEntity(target.gameObject);
         if (entity == null)
         {
-            GameObject gameObject = trigger.gameObject;
+            GameObject gameObject = target.gameObject;
             Debug.LogError($"Can't find entity of gameObject {gameObject.name}", gameObject);
             return;
         }

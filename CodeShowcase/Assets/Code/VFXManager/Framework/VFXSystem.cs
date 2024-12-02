@@ -3,108 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
 
-public interface IVFXTrigger
-{
-    public GameObject gameObject { get; }
-}
-
-public class VFXSystemManager
-{
-    private Dictionary<int, VFXSystem>[] allSystems = new Dictionary<int, VFXSystem>[(int)VFXSystemID.Count]
-    {
-        new Dictionary<int, VFXSystem>(),
-        new Dictionary<int, VFXSystem>(),
-    };
-
-    // DO NOT delete the initial count to ensure all constructors of new systems are added.
-    private static readonly Func<VFXSystem>[] Constructors = new Func<VFXSystem>[(int)VFXSystemID.Count]
-    {
-        () => new VFXMaterialSystem(),
-        () => new VFXScreenEffectSystem(),
-    };
-
-    public static VFXSystemManager Instance { get; } = new VFXSystemManager();
-    
-    public void Init()
-    {
-        int count = (int)VFXSystemID.Count;
-        for (int i = 0; i < count; i++)
-        {
-            allSystems[i] = new Dictionary<int, VFXSystem>();
-        }
-    }
-    
-    public void UpdateAllSystems()
-    {
-        foreach (Dictionary<int, VFXSystem> subSystems in allSystems)
-        {
-            foreach (VFXSystem system in subSystems.Values)
-            {
-                system.UpdateStates();
-            }
-        }
-    }
-
-    public bool Add(VFXConfig config, IVFXTrigger trigger, out int vfxID)
-    {
-        if ((config.Features & VFXSystemFeatures.RequiresACaller) != 0
-            && trigger == null || !trigger.gameObject)
-        {
-            Debug.LogError("Callable is invalid while config requires a caller.");
-            vfxID = default;
-            return false;
-        }
-
-        int callerID = trigger.gameObject.GetInstanceID();
-        Dictionary<int, VFXSystem> systems = allSystems[(int)config.SystemID];
-        if (!systems.TryGetValue(callerID, out VFXSystem system))
-        {
-            systems[callerID] = system = CreateInstance(config.SystemID, trigger);
-        }
-
-        return system.Add(config, out vfxID);
-    }
-
-    private static VFXSystem CreateInstance(VFXSystemID id, IVFXTrigger trigger)
-    {
-        var system = Constructors[(int)id]();
-        system.Bind(trigger);
-        system.Init();
-        return system;
-    }
-
-    public bool Remove(VFXConfig config, int vfxID, GameObject target)
-    {
-        if ((config.Features & VFXSystemFeatures.RequiresACaller) != 0 && !target)
-        {
-            Debug.LogError("Callable is invalid while config requires a caller.");
-            return false;
-        }
-
-        int callerID = target.GetInstanceID();
-        Dictionary<int, VFXSystem> systems = allSystems[(int)config.SystemID];
-        if (!systems.TryGetValue(callerID, out VFXSystem system))
-        {
-            // Target may be released so don't have to log here. 
-            return false;
-        }
-
-        bool removed = system.Remove(vfxID);
-        return removed;
-    }
-}
-
 public abstract class VFXSystem
 {
     public const int VFXStageCount = 3;
-    protected IVFXTrigger trigger { get; private set; }
+    protected GameObject target { get; private set; }
     public abstract void UpdateStates();
-    public abstract bool Add(VFXConfig config, out int vfxID);
+    public abstract bool Add(VFXConfig config, GameObject target, out VFXHandler vfxID);
     public abstract bool Remove(int vfxID);
     public abstract void Init();
-    public void Bind(IVFXTrigger trigger)
+    public void Bind(GameObject target)
     {
-        this.trigger = trigger;
+        this.target = target;
     }
 }
 
@@ -113,7 +22,7 @@ public enum VFXSystemFeatures
 {
     None = 0,
     Staging = 1 << 0,
-    RequiresACaller = 1 << 1,
+    Binding = 1 << 1,
 }
 
 /// <summary>
@@ -126,16 +35,18 @@ public abstract class VFXSystem<TVFXConfig, TVFXState> : VFXSystem
     where TVFXState : VFXState<TVFXConfig>, new()
 {
     private static int _increasingID;
-    // TODO: Consider implement a index-cached list to save performance of fetching and looping.  
+    // TODO: Consider implement a index-cached list to save performance of fetching and looping.
     private readonly Dictionary<int, TVFXState> _states = new();
     private static List<TVFXState> removeList = new();
 
-    public sealed override bool Add(VFXConfig config, out int vfxID)
+    public sealed override bool Add(VFXConfig config, GameObject target, out VFXHandler handler)
     {
         TVFXState state = GenericPool<TVFXState>.Get();
         state.config = config as TVFXConfig;
-        vfxID = state.id = _increasingID++;
+        int vfxID = state.id = _increasingID++;
         _states.Add(state.id, state);
+        int targetID = target ? target.GetInstanceID() : 0;
+        handler = new VFXHandler(config.SystemID, vfxID, targetID);
         OnStateInit(state);
         OnPlayStart(state);
         state.stage = VFXStage.FadingIn;

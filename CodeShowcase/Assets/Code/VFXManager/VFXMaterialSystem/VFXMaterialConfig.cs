@@ -4,7 +4,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "VFXMaterialConfig", menuName = "VFX/MaterialConfig")]
 public class VFXMaterialConfig : VFXConfig
 {
-    public override VFXSystemFeatures Features => VFXSystemFeatures.Staging | VFXSystemFeatures.RequiresACaller;
+    public override VFXSystemFeatures Features => VFXSystemFeatures.Staging | VFXSystemFeatures.Binding;
     public override VFXSystemID SystemID => VFXSystemID.VFXMaterialSystem;
     public override bool IsValid => true;
     public int priority;
